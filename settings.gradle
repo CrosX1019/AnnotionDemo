@@ -1,3 +1,4 @@
 rootProject.name = "AnnotionDemo"
 include ':app'
 include ':annotations'
+include ':annotation_compiler'

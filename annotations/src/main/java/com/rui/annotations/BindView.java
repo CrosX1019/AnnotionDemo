@@ -26,13 +26,12 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface BindView {
     // 如果只有一个方法，则注解使用时需在后方添加对应类型参数
-    String value();
+    int value();
     // exp:
     // @BindView("value")
     // private String str;
 
     // 如果含有多个方法，则需要添加对应方法名的参数
-    int id();
     // exp:
     // @BindView(value = "value", id = 1)
     // private String str;
