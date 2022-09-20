@@ -60,7 +60,7 @@ public class AnnotationCompiler extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> set, RoundEnvironment roundEnvironment) {
-//        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "CrosX: " + set);
+        processingEnv.getMessager().printMessage(Diagnostic.Kind.NOTE, "Test: " + set);
 
         //set中存放了
         //TypeElement: 类
