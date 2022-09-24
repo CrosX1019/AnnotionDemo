@@ -13,6 +13,9 @@ public class ElementForType {
     //所有绑定方法的节点集合
     List<ExecutableElement> methodElementList;
 
+    //绑定所有String的成员变量的节点集合
+    List<VariableElement> stringElementList;
+
     public List<VariableElement> getViewElementList() {
         return viewElementList;
     }
@@ -27,5 +30,13 @@ public class ElementForType {
 
     public void setMethodElementList(List<ExecutableElement> methodElementList) {
         this.methodElementList = methodElementList;
+    }
+
+    public List<VariableElement> getStringElementList() {
+        return stringElementList;
+    }
+
+    public void setStringElementList(List<VariableElement> stringElementList) {
+        this.stringElementList = stringElementList;
     }
 }

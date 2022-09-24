@@ -1,6 +1,7 @@
 package com.rui.annotation_compiler;
 
 import com.google.auto.service.AutoService;
+import com.rui.annotations.BindString;
 import com.rui.annotations.BindView;
 import com.rui.annotations.OnClick;
 
@@ -51,6 +52,7 @@ public class AnnotationCompiler extends AbstractProcessor {
         Set<String> types = new HashSet<>();
         types.add(BindView.class.getCanonicalName());
         types.add(OnClick.class.getCanonicalName());
+        types.add(BindString.class.getCanonicalName());
         return types;
     }
 
@@ -73,7 +75,6 @@ public class AnnotationCompiler extends AbstractProcessor {
         Map<TypeElement, ElementForType> map = findAndParserTarget(roundEnvironment);
         writeInFiler(map);
 
-
         return false;
     }
 
@@ -86,6 +87,74 @@ public class AnnotationCompiler extends AbstractProcessor {
         //获取APP中所有用到了OnClick注解的方法节点对象
         Set<? extends Element> methodElements = roundEnvironment.getElementsAnnotatedWith(OnClick.class);
 
+        //获取APP中所有用到了BindString注解的成员变量String的节点对象
+        Set<? extends Element> stringElements = roundEnvironment.getElementsAnnotatedWith(BindString.class);
+
+        //保存所有BindView节点到map
+        saveBindViewElements(viewElements, map);
+
+        //保存所有OnClick节点到map
+        saveOnClickElements(methodElements, map);
+
+        //保存所有BindString节点到map
+        saveBindStringElements(stringElements, map);
+
+        return map;
+    }
+
+    public void writeInFiler(Map<TypeElement, ElementForType> map) {
+        if (map.size() > 0) {
+            Writer writer = null;
+            for (TypeElement typeElement : map.keySet()) {
+                StringBuilder stringBuilder = new StringBuilder();
+                //得到包名
+                String activityName = typeElement.getSimpleName().toString();
+                String packageName = processingEnv.getElementUtils().getPackageOf(typeElement).toString();
+                ElementForType elementForType = map.get(typeElement);
+
+                try {
+                    JavaFileObject sourceFile = filer.createSourceFile(packageName + "." + activityName + "_ViewBinding");
+
+                    writer = sourceFile.openWriter();
+
+                    stringBuilder.append("package ").append(packageName).append(";\n");
+
+                    stringBuilder.append("import ").append(packageName).append(".IBinder;\n\n");
+
+                    stringBuilder.append("import android.view.View;\n\n");
+
+                    stringBuilder.append("public class ").append(activityName).append("_ViewBinding implements IBinder<").append(packageName).append(".").append(activityName).append("> {\n\n");
+
+                    stringBuilder.append("    @Override\n" + "    public void bind(").append(packageName).append(".").append(activityName).append(" target) {\n");
+
+                    appendBindView(elementForType, stringBuilder);
+
+                    appendOnClick(elementForType, stringBuilder);
+
+                    appendBindString(elementForType, stringBuilder);
+
+                    stringBuilder.append("    }\n");
+                    stringBuilder.append("}");
+
+                    writer.write(stringBuilder.toString());
+
+                } catch (IOException e) {
+                    e.printStackTrace();
+                } finally {
+                    if (writer != null) {
+                        try {
+                            writer.close();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+
+    public void saveBindViewElements(Set<? extends Element> viewElements, Map<TypeElement, ElementForType> map) {
         //遍历所有成员变量View的节点，使其与之类节点一一对应
         for (Element viewElement : viewElements) {
             //cast为成员变量节点
@@ -102,7 +171,7 @@ public class AnnotationCompiler extends AbstractProcessor {
             } else {
                 elementForType = map.get(typeElement);
                 viewElementList = elementForType.getViewElementList();
-                if(viewElementList == null) {
+                if (viewElementList == null) {
                     viewElementList = new ArrayList<>();
                 }
             }
@@ -110,7 +179,9 @@ public class AnnotationCompiler extends AbstractProcessor {
             elementForType.setViewElementList(viewElementList);
             map.put(typeElement, elementForType);
         }
+    }
 
+    public void saveOnClickElements(Set<? extends Element> methodElements, Map<TypeElement, ElementForType> map) {
         //遍历所有成员变量View的节点，使其与之类节点一一对应
         for (Element methodElement : methodElements) {
             //cast为成员变量节点
@@ -128,7 +199,7 @@ public class AnnotationCompiler extends AbstractProcessor {
             } else {
                 elementForType = map.get(typeElement);
                 methodElementList = elementForType.getMethodElementList();
-                if(methodElementList == null) {
+                if (methodElementList == null) {
                     methodElementList = new ArrayList<>();
                 }
             }
@@ -136,86 +207,81 @@ public class AnnotationCompiler extends AbstractProcessor {
             elementForType.setMethodElementList(methodElementList);
             map.put(typeElement, elementForType);
         }
-
-        return map;
     }
 
-    public void writeInFiler(Map<TypeElement, ElementForType> map) {
-        if (map.size() > 0) {
-            Writer writer = null;
-            Iterator<TypeElement> iterator = map.keySet().iterator();
-            while (iterator.hasNext()) {
-                //得到包名
-                TypeElement typeElement = iterator.next();
-                String activityName = typeElement.getSimpleName().toString();
-                String packageName = processingEnv.getElementUtils().getPackageOf(typeElement).toString();
+    public void saveBindStringElements(Set<? extends Element> stringElements, Map<TypeElement, ElementForType> map) {
+        //遍历所有成员变量String的节点，使其与之类节点一一对应
+        for (Element stringElement : stringElements) {
+            //cast为成员变量节点
+            VariableElement variableElement = (VariableElement) stringElement;
+            //获取到该成员变量的类节点
+            TypeElement typeElement = (TypeElement) variableElement.getEnclosingElement();
 
-                try {
-                    JavaFileObject sourceFile = filer.createSourceFile(packageName + "." + activityName + "_ViewBinding");
+            ElementForType elementForType;
+            List<VariableElement> stringElementList;
 
-                    writer = sourceFile.openWriter();
-
-                    writer.write("package " + packageName + ";\n");
-
-                    writer.write("import " + packageName + ".IBinder;\n\n");
-
-                    writer.write("import android.view.View;\n\n");
-
-                    writer.write("public class " + activityName + "_ViewBinding implements IBinder<" + packageName + "." + activityName + "> {\n\n");
-
-                    writer.write("    @Override\n" + "    public void bind(" + packageName + "." + activityName + " target) {\n");
-
-                    List<VariableElement> variableElementList = map.get(typeElement).getViewElementList();
-                    if (variableElementList == null || variableElementList.size() == 0) {
-                        continue;
-                    }
-                    for (VariableElement variableElement : variableElementList) {
-                        //得到名字
-                        String variableName = variableElement.getSimpleName().toString();
-                        //得到ID
-                        int id = variableElement.getAnnotation(BindView.class).value();
-                        //得到类型
-                        TypeMirror typeMirror = variableElement.asType();
-                        writer.write("        target." + variableName + " = (" + typeMirror + ")target.findViewById(" + id + ");\n");
-                    }
-
-                    List<ExecutableElement> executableElementList = map.get(typeElement).getMethodElementList();
-                    if (executableElementList == null || executableElementList.size() == 0) {
-                        continue;
-                    }
-                    for (ExecutableElement executableElement : executableElementList) {
-                        //得到ID数组
-                        int[] ids = executableElement.getAnnotation(OnClick.class).value();
-                        String methodName = executableElement.getSimpleName().toString();
-                        StringBuilder stringBuilder = new StringBuilder();
-                        for (int id : ids) {
-                            stringBuilder.append("        target.findViewById(").append(id).append(").setOnClickListener(new View.OnClickListener() {\n");
-                            stringBuilder.append("            public void onClick(View view) {\n");
-                            stringBuilder.append("                target.").append(methodName).append("(view);\n");
-                            stringBuilder.append("            }\n");
-                            stringBuilder.append("        });\n");
-                        }
-
-                        writer.write(stringBuilder.toString());
-                    }
-
-                    writer.write("    }\n");
-                    writer.write("}");
-
-
-                } catch (IOException e) {
-                    e.printStackTrace();
-                } finally {
-                    if (writer != null) {
-                        try {
-                            writer.close();
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                    }
+            if (!map.containsKey(typeElement)) {
+                elementForType = new ElementForType();
+                stringElementList = new ArrayList<>();
+            } else {
+                elementForType = map.get(typeElement);
+                stringElementList = elementForType.getStringElementList();
+                if (stringElementList == null) {
+                    stringElementList = new ArrayList<>();
                 }
-
             }
+            stringElementList.add(variableElement);
+            elementForType.setStringElementList(stringElementList);
+            map.put(typeElement, elementForType);
+        }
+    }
+
+    public void appendBindView(ElementForType elementForType, StringBuilder builder) {
+        List<VariableElement> variableElementList = elementForType.getViewElementList();
+        if (variableElementList == null || variableElementList.size() == 0) {
+            return;
+        }
+        for (VariableElement variableElement : variableElementList) {
+            //得到名字
+            String variableName = variableElement.getSimpleName().toString();
+            //得到ID
+            int id = variableElement.getAnnotation(BindView.class).value();
+            //得到类型
+            TypeMirror typeMirror = variableElement.asType();
+            builder.append("        target.").append(variableName).append(" = (").append(typeMirror).append(")target.findViewById(").append(id).append(");\n\n");
+        }
+    }
+
+    public void appendOnClick(ElementForType elementForType, StringBuilder builder) {
+        List<ExecutableElement> executableElementList = elementForType.getMethodElementList();
+        if (executableElementList == null || executableElementList.size() == 0) {
+            return;
+        }
+        for (ExecutableElement executableElement : executableElementList) {
+            //得到ID数组
+            int[] ids = executableElement.getAnnotation(OnClick.class).value();
+            String methodName = executableElement.getSimpleName().toString();
+            for (int id : ids) {
+                builder.append("        target.findViewById(").append(id).append(").setOnClickListener(new View.OnClickListener() {\n");
+                builder.append("            public void onClick(View view) {\n");
+                builder.append("                target.").append(methodName).append("(view);\n");
+                builder.append("            }\n");
+                builder.append("        });\n\n");
+            }
+        }
+    }
+
+    public void appendBindString(ElementForType elementForType, StringBuilder builder) {
+        List<VariableElement> variableElementList = elementForType.getStringElementList();
+        if (variableElementList == null || variableElementList.size() == 0) {
+            return;
+        }
+        for (VariableElement variableElement : variableElementList) {
+            //得到名字
+            String variableName = variableElement.getSimpleName().toString();
+            //得到ID
+            int id = variableElement.getAnnotation(BindString.class).value();
+            builder.append("        target.").append(variableName).append(" = target.getResources().getString(").append(id).append(");\n\n");
         }
     }
 

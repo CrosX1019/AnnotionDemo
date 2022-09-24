@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">AnnotionDemo</string>
+    <string name="testText1">测试文字 1</string>
+    <string name="testText2">测试文字 2</string>
+    <string name="testText3">测试文字 3</string>
+    <string name="testText4">测试文字 4</string>
+    <string name="testText5">测试文字 5</string>
 </resources>
