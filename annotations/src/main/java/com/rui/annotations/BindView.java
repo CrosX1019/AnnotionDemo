@@ -23,7 +23,7 @@ import java.lang.annotation.Target;
  */
 
 @Target({ElementType.FIELD})
-@Retention(RetentionPolicy.RUNTIME)
+@Retention(RetentionPolicy.CLASS)
 public @interface BindView {
     // 如果只有一个方法，则注解使用时需在后方添加对应类型参数
     int value();
